@@ -1,0 +1,55 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "KK"
+date: "September 24, 2015"
+output: html_document
+---
+
+###Getting and Cleaning Data
+```{r}
+WD       <- "C:/Users/KK/Documents/Outside Learning/Specialization-Data Science/08_Practical Machine Learning/Project"
+setwd(WD)
+data     <- read.csv("pml-training.csv", na.strings = c("NA","#DIV/0!",""))
+submission    <- read.csv("pml-testing.csv", na.strings = c("NA","#DIV/0!",""))
+##cleaning data by using only data from accelerometer and dumbbell
+
+NAColumn      <- which(is.na(data[1,]) == TRUE)
+data2         <- data[,-NAColumn]
+VariableName  <- colnames(data2)
+accel         <- grep("accel",VariableName)
+dumbbell      <- grep("dumbbell", VariableName)
+useVariable   <- sort(c(accel,dumbbell,60))
+data2         <- data2[ , useVariable]
+data2         <- na.omit(data2)##Remove NA
+submit.data   <- submission[,-NAColumn]
+submit.data   <- submit.data[ , useVariable]
+
+```
+
+
+###Building Model
+Data partitioning and prediction
+```{r}
+library(caret)
+library(randomForest)
+##Cross Validation - Create Data Partition by spliting "pml-training.csv" into train set and test set
+inTrain        <- createDataPartition(y = data2$class, p = 0.75, list = FALSE)
+training       <- data2[inTrain, ]
+testing        <- data2[-inTrain, ]
+##Preprocessing with PCA
+set.seed(1804)
+modelFit       <- randomForest(classe ~ .,data=training,mtry=5,importance=TRUE)
+modelFit
+```
+
+Cross Validation
+```{r}
+##Predict testing data set with the model from training data set
+predictions    <- predict(modelFit, newdata = testing)
+```
+
+The out of sample error rate is shown in the confusion matrix below
+```{r, echo = FALSE}
+##Compare the predictions with observed classe in testing data set
+confusionMatrix(predictions, testing$classe)
+```
